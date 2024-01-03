@@ -24,10 +24,6 @@
 
 Get the other person hash through other means of communication (preferably physical ones). Insert the hash in the "New Chat" box and click on the newly created chat.
 
-**TODO and TBA**:
-
-- Ship automated build script (and eventualy github actions workflow)
-
 **Disadvantages**:
 
 - Slow, between local encryption and TOR routing
