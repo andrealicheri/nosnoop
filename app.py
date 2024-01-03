@@ -6,7 +6,6 @@ import subprocess
 import time
 from nacl.secret import SecretBox
 import nacl.utils
-import config as config
 from pbkdf2 import PBKDF2
 import requests
 import threading
@@ -16,6 +15,19 @@ import bleach
 import base64
 import mimetypes
 import shutil
+import json
+
+if not os.path.exists("config.json"):
+   with open("config.json", "w") as f:
+      f.write("""{
+    "browser": "browser/chrome.exe",
+    "tor": "tor",
+    "torPort": 32022,
+    "receivePort": 32023
+}""")
+      
+with open("config.json", "r") as f:
+   config = json.load(f)
 
 
 app = Flask(__name__)
@@ -29,18 +41,18 @@ create(["data/", "data/chats", "data/codes"])
 if not os.path.exists("data/.torrc"):
    with open("data/.torrc", "w") as f:
       f.write(rf"""HiddenServiceDir {os.path.abspath("data/")}
-HiddenServicePort 80 127.0.0.1:{config.receivePort}
-SOCKSPort {config.torPort}""")
+HiddenServicePort 80 127.0.0.1:{config["receivePort"]}
+SOCKSPort {config["torPort"]}""")
       
 else:
    with open("data/.torrc", "r") as f:
       content = f.readlines()
-      content[1] = f"HiddenServicePort 80 127.0.0.1:{config.receivePort}"
-      content[2] = f"\nSOCKSPort {config.torPort}"
+      content[1] = f"HiddenServicePort 80 127.0.0.1:{config["receivePort"]}"
+      content[2] = f"\nSOCKSPort {config["torPort"]}"
    with open("data/.torrc", "w") as f:
       f.writelines(content)
 
-process = subprocess.Popen([config.tor, "-f", os.path.abspath("data/.torrc")])
+process = subprocess.Popen([config["tor"], "-f", os.path.abspath("data/.torrc")])
 def waitKey():
    if not os.path.exists("data/hs_ed25519_public_key") or not os.path.exists("data/hs_ed25519_secret_key"):
       time.sleep(0.1)
@@ -55,7 +67,7 @@ with open("data/hs_ed25519_secret_key", "rb") as f:
 with open("data/hs_ed25519_public_key", "rb") as f:
    tor_pub_key = f.read()
 
-rt = RequestsTor(tor_ports=[config.torPort])
+rt = RequestsTor(tor_ports=[config["torPort"]])
 
 with open("data/hostname", "r") as f: 
    onion = f.read()[:-7]
@@ -98,7 +110,7 @@ def duress(folder_path):
     
 @app.route("/")
 def send_main():
-    if shutil.which(config.tor) is None:
+    if shutil.which(config["tor"]) is None:
        return send_from_directory("app", "notor.html")
     if os.path.exists("data/confirm"):
       return send_from_directory("app", "index.html")
@@ -271,17 +283,17 @@ def check_otp(name):
    else:
       abort(400)
 
-ui = FlaskUI(app=app, server="flask", height=600, width=1400, browser_path=config.browser)
+ui = FlaskUI(app=app, server="flask", height=600, width=1400, browser_path=config["browser"])
 
 def run_flask_ui():
     ui.run()
 
 def run_server():
-    server.run(port=config.receivePort)
+    server.run(port=config["receivePort"])
 
 if __name__ == "__main__":
-    if shutil.which(config.browser) is not None:
-      config.browser = None
+    if shutil.which(config["browser"]) is not None:
+      config["browser"] = None
     thread_flask_ui = threading.Thread(target=run_flask_ui)
     thread_server = threading.Thread(target=run_server)
     thread_flask_ui.start()
