@@ -1,0 +1,4 @@
+data/
+browser/
+__pycache__/
+test.py

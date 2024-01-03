@@ -1,0 +1,34 @@
+name: Build Linux
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.x
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Build Linux executable
+      run: |
+        pyinstaller --onefile app.py
+        pyinstaller --onefile app/        
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux-executable
+        path: dist/

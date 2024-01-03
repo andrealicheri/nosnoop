@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoSnoop</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script>
+    function savePin() {
+        window.pin = document.getElementById("pin").value
+    }
+    </script>
+<link rel="icon" type="image/x-icon" href="/favicon.png"></head>
+
+<body>
+    <div>
+        <p>Welcome to NoSnoop!</p>
+        <p>Please enter the passcode.</p>
+        <form hx-post="/auth" hx-trigger="submit" hx-target="#warning" onsubmit="savePin()" >
+            <input type="password" placeholder="Enter your passcode here..." name="pin" id="pin"/>
+            <input type="submit" value="Submit" />
+        </form>
+        <div id="warning" style="color: red"></div>
+    </div>
+
+    <style>
+        body {
+            background-color: rgb(25, 25, 25);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            color: white;
+            text-align: center;
+            min-height: 90vh;
+        }
+
+        input[type="password"] {
+            border: solid rgb(113, 21, 115);
+            border-radius: 25px;
+            background-color: rgb(25, 25, 25);
+            padding: 20px;
+            color: white;
+            font-family: monospace;
+            width: 200px;
+        }
+
+        input[type="password"]:focus::placeholder  {
+            color: rgba(0, 255, 255, 0)
+        }
+
+        input[type="submit"] {
+            color: rgb(113, 21, 115); ;
+            border-radius: 15px;
+            padding: 6px;
+            font-family: monospace;
+        }
+    </style>
+</body>
+
+</html>

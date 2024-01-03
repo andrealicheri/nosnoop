@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoSnoop</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<link rel="icon" type="image/x-icon" href="/favicon.png"></head>
+
+<body>
+    <div>
+        <p>Here's your hash. You can share it with anyone to making them able to connect with you on NoSnoop.</p>
+        <div hx-get="/your_hash" hx-trigger="load"></div>
+        <div hx-get="/reset_read" hx-trigger="load" hx-swap="none"></div>
+    </div>
+
+    <img src="/arrow.png" hx-get="/chats.html" hx-target="body" width="50" height="50"/>
+
+    <style>
+        body {
+            background-color: rgb(25, 25, 25);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: monospace;
+            color: white;
+            text-align: center;
+            min-height: 90vh;
+        }
+
+        img {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            filter: invert(1);
+        }
+    </style>
+</body>
+
+</html>
