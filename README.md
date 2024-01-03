@@ -46,3 +46,4 @@ I already know. All the messages get routed through TOR, so it's slow because of
 **Bottom page**:
 
 Still in early development. Made with ❤️ and with privacy in mind by Andrea Licheri
+
