@@ -25,7 +25,7 @@ jobs:
 
     - name: Build Linux executable
       run: |
-        pyinstaller --onefile --add-data="app;app" app.py         
+        pyinstaller --onefile --add-data app;app app.py         
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v2
