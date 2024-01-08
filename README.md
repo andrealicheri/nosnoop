@@ -42,8 +42,6 @@ The best way to verify that an application is secure is by checking the code man
 
 I already know. All the messages get routed through TOR, so it's slow because of bouncing the request through multiple destinations instead of just one recipient machine. Plus, all messages are locally encrypted, so everytime that a chat has to be read or wrote to some time elapses because of computational limits (tl;dr: encryption/de-encryption takes some time). If you prioritize speed over privacy and anonymity I'd suggest to try other messaging apps such as [Signal](https://signal.org)
 
-
 **Bottom page**:
 
 Still in early development. Made with ❤️ and with privacy in mind by Andrea Licheri
-
