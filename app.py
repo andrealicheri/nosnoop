@@ -16,6 +16,9 @@ import base64
 import mimetypes
 import shutil
 import json
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.backends import default_backend
 
 if not os.path.exists("config.json"):
    with open("config.json", "w") as f:
@@ -107,7 +110,67 @@ def duress(folder_path):
       file_path = os.path.join(folder_path, filename)
       if os.path.isfile(file_path):
          os.remove(file_path)
-    
+
+if not os.path.exists("data/pub.pem") or not os.path.exists("data/priv.pem"):
+    private_key = rsa.generate_private_key(
+        public_exponent=65537,
+        key_size=2048,
+        backend=default_backend()
+    )
+
+    public_key = private_key.public_key()
+
+    with open('data/priv.pem', 'wb') as private_key_file:
+        private_key_bytes = private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        private_key_file.write(private_key_bytes)
+
+    with open('data/pub.pem', 'wb') as public_key_file:
+        public_key_bytes = public_key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+        public_key_file.write(public_key_bytes)
+
+def encrypt_message(message, public_key_stream):
+   public_key = serialization.load_pem_public_key(
+            public_key_stream,
+            backend=default_backend()
+   )
+
+   encrypted_message = public_key.encrypt(
+        message.encode(),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
+   return encrypted_message.hex()
+
+def decrypt_message(encrypted_message, private_key_path='data/priv.pem'):
+    with open(private_key_path, 'rb') as private_key_file:
+        private_key = serialization.load_pem_private_key(
+            private_key_file.read(),
+            password=None,
+            backend=default_backend()
+        )
+
+    decrypted_message = private_key.decrypt(
+        bytes.fromhex(encrypted_message),
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+
+    return decrypted_message.decode()
+
 @app.route("/")
 def send_main():
     if shutil.which(config["tor"]) is None:
