@@ -1,4 +1,4 @@
-# NoSnoop: Yet another P2P anonymous chat apps
+# NoSnoop: Yet another P2P anonymous chat app
 
 **Advantages:**
 
