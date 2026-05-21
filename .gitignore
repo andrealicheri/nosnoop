@@ -3,3 +3,4 @@ browser/
 __pycache__/
 test.py
 app.exe
+config.json

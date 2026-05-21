@@ -10,13 +10,14 @@
 - 📄 General file sharing support
 - 🤷 No leaks, the only one that owns the data is you and your recipient
 - 👁️ Open source, everyone can look up what's in the application
+- 🤏 Extremely minimal codebase
 
 **Setup**:
 
 If you are too lazy to compile the program here's what to do:
 
 - Download the build for your platform from Github Action's artifacts and install Tor (if not already done).
-- Adjust the config file to your needs (it's **REALLY** recommended that you set the browser field in the config to the path of a privacy respecting browser like [Ungoogled Chromium](https://ungoogled-software.github.io/ungoogled-chromium-binaries/))
+- In the `config.json` file, adjust the `tor` and `browser` fields so that they point to your tor installations (usually `{The folder where you installed Tor Browser}/TorBrowser/Tor/tor.exe` on Windows) and to your browser of choice respectively (it's **REALLY** recommended that you set the `browser` field in the config to the path of a privacy respecting browser like [Ungoogled Chromium](https://ungoogled-software.github.io/ungoogled-chromium-binaries/)) 
 
 **Building**:
 
@@ -38,10 +39,10 @@ The best way to verify that an application is secure is by checking the code man
 - Insert the hash in the "New Chat" box
 - Click on the newly created chat.
 
-**It's slow**:
+**Techincal Limitations**:
 
-I already know. All the messages get routed through TOR, so it's slow because of bouncing the request through multiple destinations instead of just one recipient machine. Plus, all messages are locally encrypted, so everytime that a chat has to be read or wrote to some time elapses because of computational limits (tl;dr: encryption/de-encryption takes some time). If you prioritize speed over privacy and anonymity I'd suggest to try other messaging apps such as [Signal](https://signal.org)
-
-**Bottom page**:
-
-Still in early development. Made with ❤️ and with privacy in mind by Andrea Licheri
+- Python -> Dedicated Encryption -> Tor -> Python -> Dedicated Decryption makes the app really slow
+- The app only works if both clients are connected at the same time, as it is fully P2P with no STUN servers used
+- Small codebase from a small developer means that even for a really small effective executable (365 lines of Python + HTMLCSS) advanced security practices and code checking are not available on more popular alternatvies (e.g.: TorChat or Briar)
+- Uses obscure "requests_tor" lib which is unmantained sicne 2022 
+- No usbkill implementation yet
