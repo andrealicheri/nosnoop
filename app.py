@@ -4,6 +4,7 @@ from flaskwebgui import FlaskUI
 import os
 import subprocess
 import time
+from nacl.public import PrivateKey, PublicKey, SealedBox
 from nacl.secret import SecretBox
 import nacl.utils
 from pbkdf2 import PBKDF2
@@ -16,10 +17,15 @@ import base64
 import mimetypes
 import shutil
 import json
-from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.backends import default_backend
+from nacl.bindings import crypto_sign_ed25519_sk_to_curve25519
+from nacl.bindings import crypto_sign_ed25519_pk_to_curve25519
+import sys
 
+
+# No config.json exist means that browser and tor are not pointed for the program
 if not os.path.exists("config.json"):
    with open("config.json", "w") as f:
       f.write("""{
@@ -28,25 +34,31 @@ if not os.path.exists("config.json"):
     "torPort": 32022,
     "receivePort": 32023
 }""")
-      
+   input("config.json generated to be edited. Press Enter to quit.")
+   sys.exit(0)
+   
+# Loads config.json
 with open("config.json", "r") as f:
    config = json.load(f)
 
 
-app = Flask(__name__)
 
 def create(folders):
    for folder in folders:
       if not os.path.exists(folder):
          os.mkdir(folder)
-         
+
+# First boot
 create(["data/", "data/chats", "data/codes"])
+
+# Configures persistent tor address
 if not os.path.exists("data/.torrc"):
    with open("data/.torrc", "w") as f:
       f.write(rf"""HiddenServiceDir {os.path.abspath("data/")}
 HiddenServicePort 80 127.0.0.1:{config["receivePort"]}
 SOCKSPort {config["torPort"]}""")
-      
+
+# Updates .torrc if config.json is changed  
 else:
    with open("data/.torrc", "r") as f:
       content = f.readlines()
@@ -55,29 +67,31 @@ else:
    with open("data/.torrc", "w") as f:
       f.writelines(content)
 
-process = subprocess.Popen([config["tor"], "-f", os.path.abspath("data/.torrc")])
+ # Not actually concerned with any tor bugs, just delays crash in case tor is not installed
+ # See app.route("/")
+try: 
+   process = subprocess.Popen([config["tor"], "-f", os.path.abspath("data/.torrc")])
+except:
+   print("Probably no tor...")
+   
 def waitKey():
    if not os.path.exists("data/hs_ed25519_public_key") or not os.path.exists("data/hs_ed25519_secret_key"):
       time.sleep(0.1)
       waitKey()
 waitKey()
 
+# pin persistent in memory, to be fixed
 pin = None
-
-with open("data/hs_ed25519_secret_key", "rb") as f:
-   tor_priv_key = f.read()
-
-with open("data/hs_ed25519_public_key", "rb") as f:
-   tor_pub_key = f.read()
 
 rt = RequestsTor(tor_ports=[config["torPort"]])
 
 with open("data/hostname", "r") as f: 
-   onion = f.read()[:-7]
+   onion = f.read()[:-7] # :-7 => .onion
 
+# derives key from user pin
 def get_key(pin):
     pin_bytes = str(pin).encode('utf-8')
-    salt = b'MyFixedSalt'
+    salt = b'MyFixedSalt' # fixed salt, to be fixed
     derived_key = PBKDF2(pin_bytes, salt, iterations=100000).read(32)
     return derived_key
 
@@ -96,90 +110,66 @@ def read_chat(filename, pin, is_file = False):
    if not is_file:
       return decrypted_message.decode('utf-8')
 
-
+# Generates a rolling secret, see server(/receive) route
 def set_otp(onion):
    with open(f"data/codes/{onion}.txt", "w") as f:
       f.write(secrets.token_hex(32))
 
+# Short hand for the secret, 
 def read_otp(onion):
    with open(f"data/codes/{onion}.txt", "r") as f:
       return f.read()
-   
+
+# duress code implementation, see /auth route
 def duress(folder_path):
    for filename in os.listdir(folder_path):
       file_path = os.path.join(folder_path, filename)
       if os.path.isfile(file_path):
          os.remove(file_path)
 
-if not os.path.exists("data/pub.pem") or not os.path.exists("data/priv.pem"):
-    private_key = rsa.generate_private_key(
-        public_exponent=65537,
-        key_size=2048,
-        backend=default_backend()
-    )
+# generates enc keys
+if not os.path.exists("data/crypt/curve_pub.key") or not os.path.exists("data/crypt/curve_priv.key"):
+   os.makedirs("data/crypt", exist_ok=True) 
+   private_key = PrivateKey.generate()
+   public_key = private_key.public_key
+   priv_bytes = private_key.encode()
+   pub_bytes = public_key.encode()
+   with open("data/crypt/curve_priv.key", "wb") as f:
+      f.write(priv_bytes)
+   with open("data/crypt/curve_pub.key", "wb") as f:
+      f.write(pub_bytes)
 
-    public_key = private_key.public_key()
+with open("data/crypt/curve_pub.key", "rb") as f:
+   tor_pub_key = f.read()
 
-    with open('data/priv.pem', 'wb') as private_key_file:
-        private_key_bytes = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-        private_key_file.write(private_key_bytes)
+# encrypt and decrypt message functions
+def encrypt_message(message, peer_public_key_bytes):
+    peer_pub = PublicKey(peer_public_key_bytes)
+    box = SealedBox(peer_pub)
+    encrypted = box.encrypt(message.encode("utf-8"))
+    return base64.b64encode(encrypted).decode("utf-8")
 
-    with open('data/pub.pem', 'wb') as public_key_file:
-        public_key_bytes = public_key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
-        public_key_file.write(public_key_bytes)
+def decrypt_message(encrypted_message_b64):
+    encrypted = base64.b64decode(encrypted_message_b64)
+    with open("data/crypt/curve_priv.key", "rb") as f:
+        priv = PrivateKey(f.read())
+    box = SealedBox(priv)
+    decrypted = box.decrypt(encrypted)
+    return decrypted.decode("utf-8")
 
-def encrypt_message(message, public_key_stream):
-   public_key = serialization.load_pem_public_key(
-            public_key_stream,
-            backend=default_backend()
-   )
+# Client side displayed in embedded browser => app flask server
 
-   encrypted_message = public_key.encrypt(
-        message.encode(),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-
-   return encrypted_message.hex()
-
-def decrypt_message(encrypted_message, private_key_path='data/priv.pem'):
-    with open(private_key_path, 'rb') as private_key_file:
-        private_key = serialization.load_pem_private_key(
-            private_key_file.read(),
-            password=None,
-            backend=default_backend()
-        )
-
-    decrypted_message = private_key.decrypt(
-        bytes.fromhex(encrypted_message),
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-
-    return decrypted_message.decode()
-
+app = Flask(__name__)
 @app.route("/")
 def send_main():
     if shutil.which(config["tor"]) is None:
-       return send_from_directory("app", "notor.html")
+       return send_from_directory("app", "notor.html") # no tor == No chat
     if os.path.exists("data/confirm"):
       return send_from_directory("app", "index.html")
     else:
-      return send_from_directory("app", "introduction.html")
+      return send_from_directory("app", "introduction.html") # first use
 
+# For ui purposes, no XSS since app is internal only
 @app.route('/<path:filename>')
 def serve_file(filename):
     return send_from_directory('app', filename)
@@ -187,6 +177,7 @@ def serve_file(filename):
 @app.route('/submit-pin', methods=["POST"])
 def get_pin():
    if not os.path.exists("data/confirm"):
+      # confirm file encrypted with pin generated key, see /auth
       write_chat("data/confirm", "test_phrase", request.form["pin"])
       return redirect("/index.html")
 
@@ -199,10 +190,14 @@ def confirm_auth():
       return '<div hx-trigger="load" hx-get="/chats.html" hx-target="body"></div>'
    except:
       try:
+         # If pin is 1234, and the user inputs the opposite, so 4321
+         # the program on fail will reverse the reversed pin, and if it works
+         # it will delete all the rest of the files
          read_chat("data/confirm", request.form["pin"][::-1])
 
          duress("data/chats")
          duress("data/codes")
+         
          pin = request.form["pin"][::-1]
          return '<div hx-trigger="load" hx-get="/chats.html" hx-target="body"></div>'
       except:
@@ -232,6 +227,7 @@ def send_chats(name):
    elif name == "create":
       write_chat("data/chats/" + request.form["hash"] + ".html", """<main></main>""", pin)
 
+   # New chat context
    elif name == "new":
       return """<p>New Chat</p>
                 <p>Insert the hash of whom you want to visit (without the .onion)</p>
@@ -241,6 +237,7 @@ def send_chats(name):
                 </form>
                 <div hx-get="/reset_read" hx-trigger="load" hx-swap="none"></div>"""
 
+   # Chatbox context
    else:
       return f"""<div id="header"><p>{name}</p></div>
                  <div hx-get="/read/{name}" hx-trigger="load, every 1s" hx-swap="innerHTML focus-scroll:true"></div>
@@ -275,8 +272,16 @@ def send_message(name):
    content = read_chat("data/chats/" + name + ".html", pin)
    write_chat("data/chats/" + name + ".html", content.replace("<main>", '<main><p id="you">{}</p>'.format(request.form["message"])),  pin)
    target_url = "http://"+ name + ".onion"
+   pubkey = rt.get(target_url + "/key").content
+
+   encrypted_message = encrypt_message(
+      request.form["message"],
+      pubkey
+   )
+   
    json_data = {
-      'message': request.form["message"],
+      'message': encrypted_message,
+      # See /receive_message
       'onion_address': onion,
       'otp': read_otp(name)
    }
@@ -291,13 +296,20 @@ def send_message(name):
    
    return "OK!"
 
+
 @app.route("/sendfile/<name>", methods=["POST"])
 def send_file(name):
+   target_url = "http://"+ name + ".onion"
+   pubkey = rt.get(target_url + "/key").content
    file = request.files["file"]
    mimetype = mimetypes.guess_type(file.filename)
    base64_data = base64.b64encode(file.read()).decode('utf-8')
    message = f"FILE: <a download='{file.filename}' href='data:{mimetype};base64,{base64_data}'>{file.filename}</a>"
-   requests.post(request.url_root + "/send/" + name, data={"message": message})
+   encrypted_message = encrypt_message(
+      message,
+      pubkey
+   )
+   requests.post(request.url_root + "/send/" + name, data={"message": encrypted_message, 'onion_address': onion, 'otp': read_otp(name)})
    return "OK!"
 
 @app.route("/your_hash")
@@ -305,15 +317,20 @@ def send_hash():
    with open("data/hostname", "r") as f:
       return f"<p>{f.read()[:-7]}</p>"
    
+# Public requests available on .onion => server flask server
 
 server = Flask(__name__)
 
 @server.route("/", methods=["POST"])
 def receive_message():
    data = request.get_json()
-   if data["message"] == pin[::1]:
-      duress("data/chats")
-      duress("data/codes")
+   message = decrypt_message(data["message"])
+   """Remote Duress
+   If NoSnoop is being taken over by threat actor impersonating you,
+   duress() will nuke not only chats/ and codes/ but also encryption and decryption keys
+   effectively deleting the .onion service"""
+   if message == pin[::-1]:
+      duress("data/")
    address = "data/chats/{}.html".format(data["onion_address"])
    json_data = {
       'is': data["otp"]
@@ -321,21 +338,37 @@ def receive_message():
    headers = {
     'Content-Type': 'application/json',
    }
+   
+   """OTP Verification
+   Instead of verifying the .onion address from the POST request directly,
+   NoSnoop uses OTP based verification. 
+   
+   When a request is sent using /send, an onion_address and a otp parameters are sent.
+   On the server(/receive_message) he doesn't trust the onion_address automatically,
+   but instead checks for the OTP value on the {onion_address}.onion/check route.
+   The /check route returns a 200 if the OTP value sent by the sender is the one stored
+   on the server. Otherwise, it returns a 400.
+   
+   NoSnoop stores a different OTP for each chat. The OTP generated by the set_otp() function
+   is a 32 hex bytestring, making bruteforce impractical over the TOR network.
+   """
+   
    response = rt.post("http://" + data["onion_address"] + ".onion/check/" + onion, json = json_data, headers = headers)
    if not response.status_code == 200:
       abort(403)
+      
    if os.path.exists(address):
       if "message" in data:
          chat_content = read_chat(address, pin)
-         write_chat(address, chat_content.replace("<main>", f'<main><p id="other">{bleach.clean(data["message"], tags=["a", "i", "b"], attributes={"a": ["download", "href"]}, protocols=["data"])}</p>'), pin)
+         write_chat(address, chat_content.replace("<main>", f'<main><p id="other">{bleach.clean(message, tags=["a", "i", "b"], attributes={"a": ["download", "href"]}, protocols=["data"])}</p>'), pin)
    else:
       if "message" in data:
          write_chat(address, f"""<main><p id="other">{bleach.clean(data["message"], tags=["a", "i", "b"], attributes={"a": ["download", "href"]}, protocols=["data"])}</p></main>""", pin)
-   return "OK"
+   return "OK" # 👍
 
 @server.route("/key")
 def send_key():
-   return Response(tor_pub_key, mimetype='application/octect-stream')
+   return Response(tor_pub_key, mimetype='application/octet-stream')
 
 @server.route("/check/<name>", methods=["POST"])
 def check_otp(name):
