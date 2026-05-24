@@ -47,7 +47,7 @@ def create(folders):
          os.mkdir(folder)
 
 # First boot
-create(["data/", "data/chats", "data/codes"])
+create(["data/", "data/chats", "data/codes", "data/crypt"])
 
 # Configures persistent tor address
 if not os.path.exists("data/.torrc"):
