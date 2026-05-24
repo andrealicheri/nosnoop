@@ -13,6 +13,7 @@
         <p>Here's your hash. You can share it with anyone to making them able to connect with you on NoSnoop.</p>
         <div hx-get="/your_hash" hx-trigger="load"></div>
         <div hx-get="/reset_read" hx-trigger="load" hx-swap="none"></div>
+        <!-- TODO: Add some kind of js lib that gens a QR code for the hash-->
     </div>
 
     <img src="/arrow.png" hx-get="/chats.html" hx-target="body" width="50" height="50"/>

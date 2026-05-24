@@ -1,21 +1,24 @@
-# NoSnoop: Yet another P2P anonymous chat app
-
+# NoSnoop: Yet another P2P anonymous chat app (still in Active Development)
 **Advantages:**
 
 - 👥 Fully P2P
-- 🧅 TOR-routed communication
-- 🔒 Chats encrypted both locally with password and E2E with keys
-- 🔑 No phone number, email or other jargon
+- 🧅 TOR routed
+- 🔒 Local Storage Password Encryption
+- 🔑 E2E encryption
+- 🤫 Perfect Forward Secrecy
+- 🎭 Anonymous (no phone, email, etc.)
 - 🗑️ Duress codes, both local and remote
 - 📄 File Sharing support
 - 👁️ Open source
 - 🤏 Extremely minimal codebase
 
+![showcase image](showcase/collage.png)
+
 **Setup**:
 
 If you are too lazy to compile the program here's what to do:
 
-- Download the build for your platform from Github Action's artifacts and install Tor (if not already done).
+- Download the build for your platform from Github Action's artifacts and install Tor (if not already done)
 - In the `config.json` file, adjust the `tor` and `browser` fields so that they point to your tor installations (usually `{The folder where you installed Tor Browser}/TorBrowser/Tor/tor.exe` on Windows) and to your browser of choice respectively (it's **REALLY** recommended that you set the `browser` field in the config to point to a privacy respecting browser like [Ungoogled Chromium](https://ungoogled-software.github.io/ungoogled-chromium-binaries/)) 
 
 **Building**:
@@ -40,6 +43,7 @@ The best way to verify that an application is secure is by checking the code man
 
 **Limitations**:
 
+- No mobile support
 - Python -> Encryption -> TOR traffic -> Python -> OTP verification -> Decryption makes the app really slow
 - The app only works if both clients are connected at the same time, as it is fully P2P with no STUN servers used
 - Small codebase from a small developer means risk of unmantained code
