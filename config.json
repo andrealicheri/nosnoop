@@ -1,6 +1,0 @@
-{
-    "browser": "browser/chrome.exe",
-    "tor": "tor",
-    "torPort": 32022,
-    "receivePort": 32023
-}
