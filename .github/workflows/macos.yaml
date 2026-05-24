@@ -2,8 +2,10 @@ name: Build macOS
 
 on:
   push:
-    branches:
-      - main
+    paths:
+      - 'app.py'
+      - "app/**"
+      - "requirements.txt"
 
 jobs:
   build-macos:

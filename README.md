@@ -44,3 +44,10 @@ The best way to verify that an application is secure is by checking the code man
 - The app only works if both clients are connected at the same time, as it is fully P2P with no STUN servers used
 - Small codebase from a small developer means risk of unmantained code
 - Uses obscure "requests_tor" lib which is unmantained since 2022 
+
+**Tech stack**:
+- Python and Flask for handling traffic between peers
+- NaCl (Curve25519) for E2E encryption and PBKDF2 for local storage encryption
+- requests_tor for handling tor requests
+- Basic HTMLCSS for the UI (along with htmx.js to handle routing)
+- Flaskwebgui to wrap app() server route in the browser

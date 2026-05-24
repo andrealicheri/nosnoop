@@ -2,8 +2,11 @@ name: Build Linux
 
 on:
   push:
-    branches:
-      - main
+    paths:
+      - 'app.py'
+      - "app/**"
+      - "requirements.txt"
+
 
 jobs:
   build-linux:

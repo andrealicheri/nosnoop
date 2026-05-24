@@ -1,5 +1,5 @@
 from flask import Flask  
-from flask import send_from_directory, request, redirect, abort, Response, stream_with_context
+from flask import send_from_directory, request, redirect, abort, Response
 from flaskwebgui import FlaskUI 
 import os
 import subprocess
@@ -17,13 +17,7 @@ import base64
 import mimetypes
 import shutil
 import json
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
-from cryptography.hazmat.backends import default_backend
-from nacl.bindings import crypto_sign_ed25519_sk_to_curve25519
-from nacl.bindings import crypto_sign_ed25519_pk_to_curve25519
 import sys
-
 
 # No config.json exist means that browser and tor are not pointed for the program
 if not os.path.exists("config.json"):
@@ -133,17 +127,16 @@ def duress(folder_path):
       if os.path.isfile(file_path):
          os.remove(file_path)
 
-# generates enc keys
-if not os.path.exists("data/crypt/curve_pub.key") or not os.path.exists("data/crypt/curve_priv.key"):
-   os.makedirs("data/crypt", exist_ok=True) 
-   private_key = PrivateKey.generate()
-   public_key = private_key.public_key
-   priv_bytes = private_key.encode()
-   pub_bytes = public_key.encode()
-   with open("data/crypt/curve_priv.key", "wb") as f:
-      f.write(priv_bytes)
-   with open("data/crypt/curve_pub.key", "wb") as f:
-      f.write(pub_bytes)
+# generates enc keys. Keys are regenerated every session to implement PFS
+os.makedirs("data/crypt", exist_ok=True) 
+private_key = PrivateKey.generate()
+public_key = private_key.public_key
+priv_bytes = private_key.encode()
+pub_bytes = public_key.encode()
+with open("data/crypt/curve_priv.key", "wb") as f:
+   f.write(priv_bytes)
+with open("data/crypt/curve_pub.key", "wb") as f:
+   f.write(pub_bytes)
 
 with open("data/crypt/curve_pub.key", "rb") as f:
    tor_pub_key = f.read()
