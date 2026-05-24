@@ -128,7 +128,6 @@ def duress(folder_path):
          os.remove(file_path)
 
 # generates enc keys. Keys are regenerated every session to implement PFS
-os.makedirs("data/crypt", exist_ok=True) 
 private_key = PrivateKey.generate()
 public_key = private_key.public_key
 priv_bytes = private_key.encode()
