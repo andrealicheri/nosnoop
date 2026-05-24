@@ -2,14 +2,13 @@
 
 **Advantages:**
 
-- 👥 Peer to peer, no single source of truth
-- 🧅 All communication is routed through TOR
-- 🔒 Besides traffic, every single chat file is encrypted with a password
-- 🔑 No need for a phone number with TOR based authentication
-- 🗑️ Duress codes, both local and remote. Delete your data without anyone knowing.
-- 📄 General file sharing support
-- 🤷 No leaks, the only one that owns the data is you and your recipient
-- 👁️ Open source, everyone can look up what's in the application
+- 👥 Fully P2P
+- 🧅 TOR-routed communication
+- 🔒 Chats encrypted both locally with password and E2E with keys
+- 🔑 No phone number, email or other jargon
+- 🗑️ Duress codes, both local and remote
+- 📄 File Sharing support
+- 👁️ Open source
 - 🤏 Extremely minimal codebase
 
 **Setup**:
@@ -17,7 +16,7 @@
 If you are too lazy to compile the program here's what to do:
 
 - Download the build for your platform from Github Action's artifacts and install Tor (if not already done).
-- In the `config.json` file, adjust the `tor` and `browser` fields so that they point to your tor installations (usually `{The folder where you installed Tor Browser}/TorBrowser/Tor/tor.exe` on Windows) and to your browser of choice respectively (it's **REALLY** recommended that you set the `browser` field in the config to the path of a privacy respecting browser like [Ungoogled Chromium](https://ungoogled-software.github.io/ungoogled-chromium-binaries/)) 
+- In the `config.json` file, adjust the `tor` and `browser` fields so that they point to your tor installations (usually `{The folder where you installed Tor Browser}/TorBrowser/Tor/tor.exe` on Windows) and to your browser of choice respectively (it's **REALLY** recommended that you set the `browser` field in the config to point to a privacy respecting browser like [Ungoogled Chromium](https://ungoogled-software.github.io/ungoogled-chromium-binaries/)) 
 
 **Building**:
 
@@ -39,10 +38,9 @@ The best way to verify that an application is secure is by checking the code man
 - Insert the hash in the "New Chat" box
 - Click on the newly created chat.
 
-**Techincal Limitations**:
+**Limitations**:
 
-- Python -> Dedicated Encryption -> Tor -> Python -> Dedicated Decryption makes the app really slow
+- Python -> Encryption -> TOR traffic -> Python -> OTP verification -> Decryption makes the app really slow
 - The app only works if both clients are connected at the same time, as it is fully P2P with no STUN servers used
-- Small codebase from a small developer means that even for a really small effective executable (365 lines of Python + HTMLCSS) advanced security practices and code checking are not available on more popular alternatvies (e.g.: TorChat or Briar)
-- Uses obscure "requests_tor" lib which is unmantained sicne 2022 
-- No usbkill implementation yet
+- Small codebase from a small developer means risk of unmantained code
+- Uses obscure "requests_tor" lib which is unmantained since 2022 

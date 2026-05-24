@@ -29,19 +29,23 @@ import sys
 if not os.path.exists("config.json"):
    with open("config.json", "w") as f:
       f.write("""{
-    "browser": "browser/chrome.exe",
+    "browser": "Put your browser of choice executable path here",
     "tor": "tor",
     "torPort": 32022,
     "receivePort": 32023
 }""")
    input("config.json generated to be edited. Press Enter to quit.")
    sys.exit(0)
-   
+
 # Loads config.json
 with open("config.json", "r") as f:
    config = json.load(f)
 
-
+if shutil.which(config["browser"]) is None:
+   print("No browser to display the UI!")
+   print("Please, set the browser field in config.json to point to an executable of a browser you trust.")
+   input("Press Enter to quit.")
+   sys.exit(0)
 
 def create(folders):
    for folder in folders:
@@ -80,7 +84,7 @@ def waitKey():
       waitKey()
 waitKey()
 
-# pin persistent in memory, to be fixed
+# TODO: pin persistent in memory, to be fixed
 pin = None
 
 rt = RequestsTor(tor_ports=[config["torPort"]])
@@ -88,10 +92,12 @@ rt = RequestsTor(tor_ports=[config["torPort"]])
 with open("data/hostname", "r") as f: 
    onion = f.read()[:-7] # :-7 => .onion
 
-# derives key from user pin
+# derives key from user pin 
+# TODO: fixed salt, to be fixed
+
 def get_key(pin):
     pin_bytes = str(pin).encode('utf-8')
-    salt = b'MyFixedSalt' # fixed salt, to be fixed
+    salt = b'MyFixedSalt' 
     derived_key = PBKDF2(pin_bytes, salt, iterations=100000).read(32)
     return derived_key
 
@@ -156,6 +162,8 @@ def decrypt_message(encrypted_message_b64):
     box = SealedBox(priv)
     decrypted = box.decrypt(encrypted)
     return decrypted.decode("utf-8")
+ 
+# TODO: Add some kind of USBkill implementation
 
 # Client side displayed in embedded browser => app flask server
 
